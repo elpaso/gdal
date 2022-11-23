@@ -87,11 +87,12 @@ static const TilingSchemeDefinition asTilingSchemes[] = {
 /************************************************************************/
 
 static std::unique_ptr<TilingSchemeDefinition>
-GetTilingScheme(const char *pszName) {
+GetTilingScheme(const char *pszName)
+{
     if(EQUAL(pszName, "CUSTOM"))
-             return nullptr;
+        return nullptr;
 
-    for(   const auto &tilingScheme : asTilingSchemes)
+    for(const auto &tilingScheme : asTilingSchemes)
     {
         if(EQUAL(pszName, tilingScheme.pszName))
         {
