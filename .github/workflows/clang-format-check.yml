@@ -13,9 +13,13 @@ jobs:
     steps:
       - name: Checkout GDAL
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
 
       - name: Set up Python
         uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
 
       - name: Install Run clang-format style check for C/C++ programs.
         run: pip install clang-format==15.0.4
