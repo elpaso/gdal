@@ -31,3 +31,9 @@ repos:
         rev: 'v15.0.4'
         hooks:
         -   id: clang-format
+            exclude: >
+              (?x)^(
+                swig/|
+                third_party/|
+                autotest/ogr/data/
+              )

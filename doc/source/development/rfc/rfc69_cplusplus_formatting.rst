@@ -77,7 +77,7 @@ integrations or other bespoke utilities (eg. ``git cl format``
 [Chromium]).
 
 A new pre-commit hook will be added to the current configuration in
-``.pre-commit-config.yaml`` to run `clang-format pre-commit <https://github.com/pre-commit/mirrors-clang-format>`__.
+``.pre-commit-config.yaml`` to run [clang-format pre-commit].
 
 To enforce the code formatting, a gatekeeper will be installed in CI,
 rejecting commits with code not conforming to the code formatting style
@@ -178,12 +178,14 @@ Implementation
 --------------
 
 1. add clang-format to pre-commit configuration file
-2. Set up GitHub workflow "code clang-format check"
+2. Set up GitHub workflow [clang-format-check]
 
 
 References
 ----------
 
+- [clang-format pre-commit] `Clang-Format Pre-Commit <https://github.com/pre-commit/mirrors-clang-format>`__
+- [clang-format-check] `Clang-Format Check Workflow <https://github.com/marketplace/actions/clang-format-check>`__
 -  [MongoDB] Succeeding With ClangFormat: `Part
    1 <https://engineering.mongodb.com/post/succeeding-with-clangformat-part-1-pitfalls-and-planning/>`__,
    `Part
