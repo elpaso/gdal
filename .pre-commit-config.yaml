@@ -35,5 +35,14 @@ repos:
               (?x)^(
                 swig/|
                 third_party/|
-                autotest/ogr/data/
+                autotest/ogr/data/|
+                alg/internal_libqhull/|
+                frmts/gtiff/libtiff/|
+                frmts/gtiff/libgeotiff/|
+                frmts/jpeg/libjpeg/|
+                frmts/jpeg/libjpeg12/|
+                frmts/png/libpng/|
+                frmts/gif/giflib/|
+                frmts/zlib/|
+                ogr/ogrsf_frmts/geojson/libjson/
               )
