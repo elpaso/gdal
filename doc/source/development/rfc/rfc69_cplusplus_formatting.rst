@@ -7,12 +7,14 @@ RFC 69: C/C++ Code Formatting
 This document proposes and describes desired code formatting style used
 across C and C++ source code in GDAL.
 
-======== ======================================
-Author:  Kurt Schwehr
-Contact: schwehr@google.com / schwehr@gmail.com
-Started: 2017-May-04
-Status:  *Work-In-Progress*
-======== ======================================
+=========== ======================================
+Author:     Kurt Schwehr
+Contact:    schwehr@google.com / schwehr@gmail.com
+Co-Author:  Alessandro Pasotti
+Contact:    elpaso@itopen.it
+Started:    2017-May-04
+Status:     *Work-In-Progress*
+=========== ======================================
 
 This RFC is based on `GEOS RFC
 4 <https://trac.osgeo.org/geos/wiki/RFC4>`__ by Mateusz Łoskot.
