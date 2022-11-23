@@ -76,18 +76,15 @@ development workflow as standalone tool or as one of many editor
 integrations or other bespoke utilities (eg. ``git cl format``
 [Chromium]).
 
-No automation of code reformatting is proposed. It would be treating the
-symptoms, no cause: developers not following the code formatting
-standard.
+A new pre-commit hook will be added to the current configuration in
+``.pre-commit-config.yaml`` to run `clang-format pre-commit <https://github.com/pre-commit/mirrors-clang-format>`__.
 
-Although no means to enforce the default formatting style are proposed,
-currently used CI services (eg. Travis CI) may be employed as a
-post-commit safety valve - a clang-format lint failure as a compile
-break (e.g.
-`clang_format.py <https://github.com/mongodb/mongo/blob/master/buildscripts/clang_format.py>`__
-build script used by MongoDB). Alternatively, a gatekeeper may be
-installed in SVN/Git, rejecting commits with code not conforming to the
-code formatting style.
+To enforce the code formatting, a gatekeeper will be installed in CI,
+rejecting commits with code not conforming to the code formatting style
+and a brief textual hint to install or update the pre-commit hooks
+will be added to failure message.
+
+External libraries
 
 Code Formatting Rules
 ---------------------
@@ -164,25 +161,15 @@ Branches
 
 Branches to run the big reformat in are:
 
--  ``trunk``
--  [STRIKEOUT:``branches/2.2``]
--  [STRIKEOUT:``branches/2.1``]
--  [STRIKEOUT:``branches/2.0``]
+-  ``master``
+-  current stable version (to make backports easier)
 
 After Big Reformat
 ------------------
 
-How to work against the natural entropy in a codebase:
-
--  It is highly recommended to use ``clang-format`` integration while
-   writing a code.
--  Format changed code before committing or opening pull requests.
--  If you have to commit change in code formatting, do it in separate
-   commit. Avoid commits with a mixture of code and formatting changes.
-
-   -  There is downside of history clutter in repository, but this
-      proposal states that a codebase with different styles across is
-      even worse.
+The pre-commit hook will automatically take care of formatting
+the code before every commit, the CI test will reject not formatted
+code.
 
 *"After all, every moment of time wasted on code formatting or
 discussion thereof is eliminated."* ~[MongoDB]
@@ -190,26 +177,9 @@ discussion thereof is eliminated."* ~[MongoDB]
 Implementation
 --------------
 
-Set up Travis CI "style safety valve" build dedicated to run
-clang-format lint based on the approach used in ``​clang_format.py``
-script by MongoDB.
+1. add clang-format to pre-commit configuration file
+2. Set up GitHub workflow "code clang-format check"
 
-Miscellaneous
--------------
-
-Those who build GDAL with GCC 6+ may appreciate consistent code format
-style as it will help to avoid some dozens of the `new compiler
-warnings <https://developers.redhat.com/blog/2016/02/26/gcc-6-wmisleading-indentation-vs-goto-fail/>`__:
-
-::
-
-   src/geom/Polygon.cpp: In member function ‘virtual int geos::geom::Polygon::getCoordinateDimension() const’:
-   src/geom/Polygon.cpp:154:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
-        if( shell != NULL )
-        ^~
-   src/geom/Polygon.cpp:157:2: note: ...this statement, but the latter is misleadingly indented as if it is guarded by the ‘if’
-     size_t nholes=holes->size();
-     ^~~~~~
 
 References
 ----------
