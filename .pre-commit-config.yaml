@@ -44,5 +44,8 @@ repos:
                 frmts/png/libpng/|
                 frmts/gif/giflib/|
                 frmts/zlib/|
+                frmts/pcidsk/sdk|
+                frmts/grib/degrib/degrib|
+                frmts/grib/degrib/g2clib|
                 ogr/ogrsf_frmts/geojson/libjson/
               )
