@@ -469,6 +469,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     void         ReleaseMutex();
 //! @endcond
 
+
   public:
      ~GDALDataset() override;
 
@@ -476,6 +477,8 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     int GetRasterYSize();
     int GetRasterCount();
     GDALRasterBand *GetRasterBand( int );
+
+    virtual bool SetQueryLoggerFunc(GDALQueryLoggerFunc pfnQueryLoggerFuncIn, void* poQueryLoggerArgIn );
 
     /** Class returned by GetBands() that act as a container for raster bands. */
     class CPL_DLL Bands
