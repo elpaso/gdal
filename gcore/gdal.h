@@ -1126,6 +1126,10 @@ bool CPL_DLL GDALDatasetUpdateRelationship(GDALDatasetH hDS,
                                            GDALRelationshipH hRelationship,
                                            char** ppszFailureReason);
 
+typedef void (*GDALQueryLoggerFunc)(const char *pszSQL, const char *pszError, int64_t lNumRecords, int64_t lExecutionTimeMilliseconds, void *pQueryLoggerArg);
+
+bool CPL_DLL GDALDatasetSetQueryLoggerFunc(GDALDatasetH hDS, GDALQueryLoggerFunc pfnQueryLoggerFunc, void* poQueryLoggerArg );
+
 /* ==================================================================== */
 /*      GDALRasterBand ... one band/channel in a dataset.               */
 /* ==================================================================== */
