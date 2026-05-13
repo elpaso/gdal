@@ -41,6 +41,7 @@ class GDALRasterProximityAlgorithm /* non final */
     std::string m_outputDataType =
         "Float32";  // Byte|Int16|UInt16|Int32|UInt32|Float32|Float64;
     std::vector<double> m_targetPixelValues{};
+    std::vector<double> m_targetBandPixelValues{};
     std::string m_distanceUnits = "pixel";  // pixel|geo
     double m_maxDistance = 0.0;
     double m_fixedBufferValue = 0.0;

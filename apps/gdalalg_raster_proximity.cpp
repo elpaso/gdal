@@ -31,12 +31,27 @@ GDALRasterProximityAlgorithm::GDALRasterProximityAlgorithm(bool standaloneStep)
     : GDALRasterPipelineNonNativelyStreamingAlgorithm(NAME, DESCRIPTION,
                                                       HELP_URL, standaloneStep)
 {
+
+    constexpr const char *VALUES_MUTEX_GROUP = "values-mutex";
     AddOutputDataTypeArg(&m_outputDataType)
         .SetChoices("Byte", "UInt16", "Int16", "UInt32", "Int32", "Float32",
                     "Float64")
         .SetDefault(m_outputDataType);
-    AddBandArg(&m_inputBand);
-    AddArg("target-values", 0, _("Target pixel values"), &m_targetPixelValues);
+
+    AddBandArg(
+        &m_inputBand,
+        "Input band (1-based index)\nNot used if --band-target-values is used");
+
+    // Mutually exclusive values (single/multi band)
+    AddArg("target-values", 0,
+           _("Target pixel value(s) (comma separated list for a single band)"),
+           &m_targetPixelValues)
+        .SetMutualExclusionGroup(VALUES_MUTEX_GROUP);
+    AddArg("band-target-values", 0,
+           _("Target pixel values (one for each band)"),
+           &m_targetBandPixelValues)
+        .SetMutualExclusionGroup(VALUES_MUTEX_GROUP);
+
     AddArg("distance-units", 0, _("Distance units"), &m_distanceUnits)
         .SetChoices("pixel", "geo")
         .SetDefault(m_distanceUnits);
@@ -75,71 +90,131 @@ bool GDALRasterProximityAlgorithm::RunStep(GDALPipelineStepRunContext &ctxt)
         outputType = GDALGetDataTypeByName(m_outputDataType.c_str());
     }
 
+    const bool hasMultiBandTargetValues = !m_targetBandPixelValues.empty();
+
+    if (hasMultiBandTargetValues)
+    {
+        if (m_targetBandPixelValues.size() !=
+            static_cast<size_t>(poSrcDS->GetRasterCount()))
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Number of target band pixel values doesn't match the "
+                     "number of bands in the input dataset");
+            return false;
+        }
+    }
+    else if (m_targetPixelValues.empty())
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "At least one target pixel value must be specified");
+        return false;
+    }
+
     auto poTmpDS = CreateTemporaryDataset(
-        poSrcDS->GetRasterXSize(), poSrcDS->GetRasterYSize(), 1, outputType,
+        poSrcDS->GetRasterXSize(), poSrcDS->GetRasterYSize(),
+        hasMultiBandTargetValues ? poSrcDS->GetRasterCount() : 1, outputType,
         /* bTiledIfPossible = */ true, poSrcDS, /* bCopyMetadata = */ false);
     if (!poTmpDS)
         return false;
 
-    const auto srcBand = poSrcDS->GetRasterBand(m_inputBand);
-    CPLAssert(srcBand);
+    // List of values for each band (or single list if single band target values)
+    std::map<int, std::vector<double>> targetValuesPerBand;
 
-    const auto dstBand = poTmpDS->GetRasterBand(1);
-    CPLAssert(dstBand);
-
-    // Build options for GDALComputeProximity
-    CPLStringList proximityOptions;
-
-    if (GetArg("max-distance")->IsExplicitlySet())
+    std::vector<int> bandsToProcess;
+    if (hasMultiBandTargetValues)
     {
-        proximityOptions.AddString(CPLSPrintf("MAXDIST=%.17g", m_maxDistance));
-    }
-
-    if (GetArg("distance-units")->IsExplicitlySet())
-    {
-        proximityOptions.AddString(
-            CPLSPrintf("DISTUNITS=%s", m_distanceUnits.c_str()));
-    }
-
-    if (GetArg("fixed-value")->IsExplicitlySet())
-    {
-        proximityOptions.AddString(
-            CPLSPrintf("FIXED_BUF_VAL=%.17g", m_fixedBufferValue));
-    }
-
-    if (GetArg("nodata")->IsExplicitlySet())
-    {
-        proximityOptions.AddString(CPLSPrintf("NODATA=%.17g", m_noDataValue));
-        dstBand->SetNoDataValue(m_noDataValue);
-    }
-
-    // Always set this to YES. Note that this was NOT the
-    // default behavior in the python implementation of the utility.
-    proximityOptions.AddString("USE_INPUT_NODATA=YES");
-
-    if (GetArg("target-values")->IsExplicitlySet())
-    {
-        std::string targetPixelValues;
-        for (const auto &value : m_targetPixelValues)
+        for (int i = 0; i < poSrcDS->GetRasterCount(); ++i)
         {
-            if (!targetPixelValues.empty())
-                targetPixelValues += ",";
-            targetPixelValues += CPLSPrintf("%.17g", value);
+            bandsToProcess.push_back(i);
+            targetValuesPerBand.emplace(std::make_pair(
+                i, std::vector<double>{m_targetBandPixelValues[i]}));
         }
-        proximityOptions.AddString(
-            CPLSPrintf("VALUES=%s", targetPixelValues.c_str()));
+    }
+    else
+    {
+        targetValuesPerBand.emplace(
+            std::make_pair(m_inputBand, m_targetPixelValues));
+        bandsToProcess.push_back(m_inputBand);
     }
 
-    const auto error = GDALComputeProximity(srcBand, dstBand, proximityOptions,
-                                            pfnProgress, pProgressData);
-    if (error == CE_None)
+    int dstBandNumber = 1;
+    CPLErr globalError = CE_None;
+
+    for (const auto inputBandNumber : bandsToProcess)
+    {
+
+        const auto srcBand = poSrcDS->GetRasterBand(inputBandNumber);
+        CPLAssert(srcBand);
+
+        const auto dstBand = poTmpDS->GetRasterBand(dstBandNumber++);
+        CPLAssert(dstBand);
+
+        // Build options for GDALComputeProximity
+        CPLStringList proximityOptions;
+
+        if (GetArg("max-distance")->IsExplicitlySet())
+        {
+            proximityOptions.AddString(
+                CPLSPrintf("MAXDIST=%.17g", m_maxDistance));
+        }
+
+        if (GetArg("distance-units")->IsExplicitlySet())
+        {
+            proximityOptions.AddString(
+                CPLSPrintf("DISTUNITS=%s", m_distanceUnits.c_str()));
+        }
+
+        if (GetArg("fixed-value")->IsExplicitlySet())
+        {
+            proximityOptions.AddString(
+                CPLSPrintf("FIXED_BUF_VAL=%.17g", m_fixedBufferValue));
+        }
+
+        if (GetArg("nodata")->IsExplicitlySet())
+        {
+            proximityOptions.AddString(
+                CPLSPrintf("NODATA=%.17g", m_noDataValue));
+            dstBand->SetNoDataValue(m_noDataValue);
+        }
+
+        // Always set this to YES. Note that this was NOT the
+        // default behavior in the python implementation of the utility.
+        proximityOptions.AddString("USE_INPUT_NODATA=YES");
+
+        if (GetArg("target-values")->IsExplicitlySet() ||
+            GetArg("band-target-values")->IsExplicitlySet())
+        {
+            std::string targetPixelValues;
+            for (const auto &value : targetValuesPerBand[inputBandNumber])
+            {
+                if (!targetPixelValues.empty())
+                    targetPixelValues += ",";
+                targetPixelValues += CPLSPrintf("%.17g", value);
+            }
+            proximityOptions.AddString(
+                CPLSPrintf("VALUES=%s", targetPixelValues.c_str()));
+        }
+
+        const auto error = GDALComputeProximity(
+            srcBand, dstBand, proximityOptions, pfnProgress, pProgressData);
+        if (error != CE_None)
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "GDALComputeProximity() failed for band %d",
+                     inputBandNumber);
+            globalError = error;
+            break;
+        }
+    }
+
+    if (globalError == CE_None)
     {
         if (pfnProgress)
             pfnProgress(1.0, "", pProgressData);
         m_outputDataset.Set(std::move(poTmpDS));
     }
 
-    return error == CE_None;
+    return globalError == CE_None;
 }
 
 GDALRasterProximityAlgorithmStandalone::
